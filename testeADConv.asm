@@ -1,7 +1,13 @@
 ; PROGRAMA PRA EU TENTAR IMPLEMENTAR UMA CONVERSSÃO AD
-; 	ADC = VIn(em Volts)*204.6
+;	JUSTIFICADO À ESQUERDA
+; 	ADC = VIn(em Volts)*204.2
 ;	TESTEI COM 500mV e o resultado foi 102
-
+;	FICA ARMAZENADO NO ADRESL
+;	
+;	JUSTIFICADO À DIREITA
+;	ÀADC = VIn(em Volts)*51
+;	TESTEI COM 500mV e o resultado foi 25
+;	FICA ARMAZENADO NO ADRESH
 ;*                     ARQUIVOS DE DEFINIÇÕES                      *
 #INCLUDE <p12f675.inc>	;ARQUIVO PADRÃO MICROCHIP PARA 12F675
 
@@ -18,7 +24,8 @@
 					;USUÁRIO
 		W_TEMP		;REGISTRADORES TEMPORÁRIOS PARA USO
 		STATUS_TEMP	;JUNTO ÀS INTERRUPÇÕES
-		ARMAZENA_ADC
+		ARMAZENA_ADC1
+		ARMAZENA_ADC2
 		;COLOQUE AQUI SUAS NOVAS VARIÁVEIS
 		;NÃO ESQUEÇA COMENTÁRIOS ESCLARECEDORES
 
@@ -78,7 +85,7 @@ INICIO
 	BANK0				;RETORNA PARA O BANCO
 	MOVLW	B'00000111'
 	MOVWF	CMCON		;DEFINE O MODO DE OPERAÇÃO DO COMPARADOR ANALÓGICO
-	MOVLW	B'10000001'
+	MOVLW	B'00000001'
 	MOVWF	ADCON0
 ;*                     INICIALIZAÇÃO DAS VARIÁVEIS                 *
 CLRF	GPIO
@@ -89,9 +96,11 @@ MAIN
         BSF ADCON0, GO           ; Iniciar a conversão A/D
 	
 	WAIT_ADC:
-	BTFSC ADCON0, GO         ; Verifica se a conversão terminou
-	GOTO WAIT_ADC            ; Continua esperando se ainda não terminou
-	MOVFW ADRESL	    
+	BTFSC	ADCON0, GO         ; Verifica se a conversão terminou
+	GOTO	WAIT_ADC            ; Continua esperando se ainda não terminou
+	MOVFW	ADRESH	
+	MOVWF	ARMAZENA_ADC1
+	
 	
 	GOTO	MAIN
 
