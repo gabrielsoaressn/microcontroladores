@@ -1,42 +1,42 @@
-;epecificaÁıes:
-; Uma convers„o A/D deve ser efetuada a cada 100ms, em modo cÌclico;
-; A interrupÁ„o gerada pelo conversor A/D deve ser utilizada; pra que?
-; Utilize o TIMER 1 para a contagem do perÌodo de amostragem (100ms);
-; A interrupÁ„o gerada pelo TIMER 1 deve ser utilizada;
-; O valor da convers„o A/D, de 0V a 5V, deve ser transformado para uma escala de 0 a 9, em valores
+;epecifica√ß√µes:
+; Uma convers√£o A/D deve ser efetuada a cada 100ms, em modo c√≠clico;
+; A interrup√ß√£o gerada pelo conversor A/D deve ser utilizada; pra que?
+; Utilize o TIMER 1 para a contagem do per√≠odo de amostragem (100ms);
+; A interrup√ß√£o gerada pelo TIMER 1 deve ser utilizada;
+; O valor da convers√£o A/D, de 0V a 5V, deve ser transformado para uma escala de 0 a 9, em valores
 ;inteiros. Veja a escala na tabela abaixo;
-; O valor da escala a ser mostrado, de 0 a 9, deve ser representado na codificaÁ„o BCD para ser
+; O valor da escala a ser mostrado, de 0 a 9, deve ser representado na codifica√ß√£o BCD para ser
 ;conectado a um display de 7 segmentos. Para que todos tenham a mesma conectividade, siga a
-;seguinte configuraÁ„o:
+;seguinte configura√ß√£o:
 ; GP0 ? b0 (MENOS significativo) do BCD
 ; GP1 ? b1 do BCD
 ; GP4 ? b2 do BCD
 ; GP5 ? b3 (MAIS significativo) do BCD
-; A convers„o A/D deve ser feita pela porta GP2;
+; A convers√£o A/D deve ser feita pela porta GP2;
 
-; ativar interrupÁ„o por timer1 por adcon0
-; n„o pode usar comparador porque ele usa as portas gp0 e gp1
+; ativar interrup√ß√£o por timer1 e por adcon0
+; n√£o pode usar comparador porque ele usa as portas gp0 e gp1
 
 	
-;*                     ARQUIVOS DE DEFINI«’ES                      *
-#INCLUDE <p12f675.inc>	;ARQUIVO PADR√O MICROCHIP PARA 12F675
+;*                     ARQUIVOS DE DEFINI√á√ïES                      *
+#INCLUDE <p12f675.inc>	;ARQUIVO PADR√ÉO MICROCHIP PARA 12F675
 
 	__CONFIG _BODEN_OFF & _CP_OFF & _PWRTE_ON & _WDT_OFF & _MCLRE_ON & _INTRC_OSC_NOCLKOUT
 
-#DEFINE	BANK0	BCF STATUS,RP0	;SETA BANK 0 DE MEM”RIA
-#DEFINE	BANK1	BSF STATUS,RP0	;SETA BANK 1 DE MAM”RIA
+#DEFINE	BANK0	BCF STATUS,RP0	;SETA BANK 0 DE MEM√ìRIA
+#DEFINE	BANK1	BSF STATUS,RP0	;SETA BANK 1 DE MAM√ìRIA
 
-;*                         VARI¡VEIS                               *
+;*                         VARI√ÅVEIS                               *
 
-	CBLOCK	0x20	;ENDERE«O INICIAL DA MEM”RIA DE
-					;USU¡RIO
-		W_TEMP		;REGISTRADORES TEMPOR¡RIOS PARA USO
-		STATUS_TEMP	;JUNTO ¿S INTERRUP«’ES
+	CBLOCK	0x20	;ENDERE√áO INICIAL DA MEM√ìRIA DE
+					;USU√ÅRIO
+		W_TEMP		;REGISTRADORES TEMPOR√ÅRIOS PARA USO
+		STATUS_TEMP	;JUNTO √ÄS INTERRUP√á√ïES
 
-		;COLOQUE AQUI SUAS NOVAS VARI¡VEIS
-		;N√O ESQUE«A COMENT¡RIOS ESCLARECEDORES
+		;COLOQUE AQUI SUAS NOVAS VARI√ÅVEIS
+		;N√ÉO ESQUE√áA COMENT√ÅRIOS ESCLARECEDORES
 
-	ENDC			;FIM DO BLOCO DE DEFINI«√O DE VARI¡VEIS
+	ENDC			;FIM DO BLOCO DE DEFINI√á√ÉO DE VARI√ÅVEIS
 
 ;*                        FLAGS INTERNOS                           *
 
@@ -44,25 +44,29 @@
 
 ;*                           ENTRADAS                              *
 
-;*                           SAÕDAS                                *
+;*                           SA√çDAS                                *
 
 ;*                       VETOR DE RESET                            *
 
-	ORG	0x00			;ENDERE«O INICIAL DE PROCESSAMENTO
+	ORG	0x00			;ENDERE√áO INICIAL DE PROCESSAMENTO
 	GOTO	INICIO
 	
-;*                    INÕCIO DA INTERRUP«√O                        *
+;*                    IN√çCIO DA INTERRUP√á√ÉO                        *
 
-	ORG	0x04			;ENDERE«O INICIAL DA INTERRUP«√O
+	ORG	0x04			;ENDERE√áO INICIAL DA INTERRUP√á√ÉO
 	MOVWF	W_TEMP		;COPIA W PARA W_TEMP
 	SWAPF	STATUS,W
 	MOVWF	STATUS_TEMP	;COPIA STATUS PARA STATUS_TEMP
-
-;*                    ROTINA DE INTERRUP«√O                        *
-
-;*                 ROTINA DE SAÕDA DA INTERRUP«√O                  *
+	
+;*                    ROTINA DE INTERRUP√á√ÉO                        *
+	BTFSS	PIE1, 0		;PULA SE A INTERRUP√á√ÉO VEIO PELO OVERFLOW DO TMR1?
+	GOTO	TESTA_ADCON		
+	GOTO	DELAY_100T1	;USA O T1 PRA FAZER O DELAY E COME√áAR A ADCON
+;*                 ROTINA DE SA√çDA DA INTERRUP√á√ÉO                  *
 
 SAI_INT
+	BCF	PIE1, 0
+	BCF	PIE1, 6
 	SWAPF	STATUS_TEMP,W
 	MOVWF	STATUS		;MOVE STATUS_TEMP PARA STATUS
 	SWAPF	W_TEMP,F
@@ -77,32 +81,54 @@ SUBROTINA1
 
 	RETURN
 
+TESTA_ADCON:
+    BTFSS   PIR1, 6	    ;SE A INTERRUP√á√ÉO TIVER OCORRIDO PELO ADC 
+    GOTO  SAI_INT
+    GOTO  ADCONV
+DELAY_100T1:
+    MOVLW 0xCF                  ; Valor alto para TMR1H
+    MOVWF TMR1H
+    MOVLW 0x18                  ; Valor baixo para TMR1L
+    MOVWF TMR1L
+    
+    ESPERA_OVERFLOW:
+    BTFSS PIR1, 0          ; Verifica se o Timer 1 estourou (TMR1IF = 1)
+    GOTO ESPERA_OVERFLOW             ; Se n√£o estourou, fica esperando
+    GOTO ADCONV
+   
+    GOTO SAI_INT
 
-	
+ADCONV:
+    BSF ADCON0, GO
+    ESPERA_ADC:
+    BTFSS ADCON0, GO
+    GOTO ESPERA_ADC
+    GOTO SAI_INT	;N√ÉO DEVE VIR PRA CA, POIS DEVE HAVER UMA OUTRA INTERURP√á√ÉO
+    
 ;*                     INICIO DO PROGRAMA                          *
-;para configurar as interrupÁıes, vou modificar os registradores
-;pie1, intcon, option?(acho que n„o),adcon0 
+;para configurar as interrup√ß√µes, vou modificar os registradores
+;pie1, intcon, option?(acho que n√£o),adcon0 
 	
 INICIO
 	BANK1				;ALTERA PARA O BANCO 1
 	MOVLW	B'00000000' ;CONFIGURA TODAS AS PORTAS DO GPIO (PINOS)
-	MOVWF	TRISIO		;COMO SAÕDAS
+	MOVWF	TRISIO		;COMO SA√çDAS
 	CLRF	ANSEL 		;DEFINE PORTAS COMO Digital I/O
 	MOVLW	B'00000100'
-	MOVWF	OPTION_REG	;DEFINE OP«’ES DE OPERA«√O
+	MOVWF	OPTION_REG	;DEFINE OP√á√ïES DE OPERA√á√ÉO
 	MOVLW	B'11000000'
-	MOVWF	INTCON		;DEFINE OP«’ES DE INTERRUP«’ES
+	MOVWF	INTCON		;DEFINE OP√á√ïES DE INTERRUP√á√ïES
 	MOVLW	B'01000001'
-	MOVWF	PIE1		;ATIVEI A INTERRUP«√O POR TMR1 OVERFLOW
-				; E POR CONVERS√O AD
+	MOVWF	PIE1		;ATIVEI A INTERRUP√á√ÉO POR TMR1 OVERFLOW
+				; E POR CONVERS√ÉO AD
 
 	BANK0				;RETORNA PARA O BANCO
 	MOVLW	B'00000111'
-	MOVWF	CMCON		;DEFINE O MODO DE OPERA«√O DO COMPARADOR ANAL”GICO
+	MOVWF	CMCON		;DEFINE O MODO DE OPERA√á√ÉO DO COMPARADOR ANAL√ìGICO
 	MOVLW	B'00000001'
 	MOVWF	T1CON
 
-;*                     INICIALIZA«√O DAS VARI¡VEIS                 *
+;*                     INICIALIZA√á√ÉO DAS VARI√ÅVEIS                 *
 
 ;*                     ROTINA PRINCIPAL                            *
 
