@@ -32,7 +32,7 @@
 					;USUÁRIO
 		W_TEMP		;REGISTRADORES TEMPORÁRIOS PARA USO
 		STATUS_TEMP	;JUNTO ÀS INTERRUPÇÕES
-;		S00
+		CONT1		;DELAY
 		;COLOQUE AQUI SUAS NOVAS VARIÁVEIS
 		;NÃO ESQUEÇA COMENTÁRIOS ESCLARECEDORES
 
@@ -88,21 +88,113 @@ ADCONV:
     BCF PIR1, 6
     BSF ADCON0, GO
     ESPERA_ADC:
-    BTFSS ADCON0, GO
+    BTFSC ADCON0, GO
     GOTO ESPERA_ADC
     GOTO SAIDA	    ;NÃO DEVE VIR PRA CA, POIS DEVE HAVER UMA OUTRA INTERURPÇÃO
     
 SAIDA:
     MOVFW   ADRESH	    ; Move o valor de ADRESH para WREG
-    SUBLW   D'51'		     ; Subtrai S00 do valor de WREG
-    BTFSS   STATUS, Z	     ;O INPUT FOI IGUAL AO S00(1V)
-    GOTO    SAIDA0001
+    SUBLW   D'25'		     ; Subtrai 51 do valor de WREG
+    BTFSS   STATUS, C	    ;O INPUT FOI menor que 500mV
+    GOTO    UM_OU_MAIOR	    ;SIM -> A SAÍDA VAI SER 1 OU ALGUMA MAIOR
+    GOTO    SAIDA0000	    ;NÃ0 -> SAÍDA VAI SER 0000
     
+UM_OU_MAIOR:
+    MOVFW   ADRESH	    ; Move o valor de ADRESH para WREG
+    SUBLW   D'50'		     ; Subtrai 51 do valor de WREG
+    BTFSS   STATUS, C	    ;O INPUT FOI menor que 500mV
+    GOTO    DOIS_OU_MAIOR	    ;SIM -> A SAÍDA VAI SER 1 OU ALGUMA MAIOR
+    GOTO    SAIDA0001	    ;NÃ0 -> SAÍDA VAI SER 0000
+ 
+DOIS_OU_MAIOR:
+    MOVFW   ADRESH	    ; Move o valor de ADRESH para WREG
+    SUBLW   D'75'		     ; Subtrai 51 do valor de WREG
+    BTFSS   STATUS, C	    ;O INPUT FOI menor que 500mV
+    GOTO    TRES_OU_MAIOR	    ;SIM -> A SAÍDA VAI SER 1 OU ALGUMA MAIOR
+    GOTO    SAIDA0010	    ;NÃ0 -> SAÍDA VAI SER 0000
+    RETURN
+
+TRES_OU_MAIOR:
+    MOVFW   ADRESH	    ; Move o valor de ADRESH para WREG
+    SUBLW   D'100'		     ; Subtrai 51 do valor de WREG
+    BTFSS   STATUS, C	    ;O INPUT FOI menor que 500mV
+    GOTO    QUATRO_OU_MAIOR ;SIM -> A SAÍDA VAI SER 1 OU ALGUMA MAIOR
+    GOTO    SAIDA0011	    ;NÃ0 -> SAÍDA VAI SER 0000
+    
+QUATRO_OU_MAIOR:
+    MOVFW   ADRESH
+    SUBLW   D'150'
+    BTFSS   STATUS, C
+    GOTO    CINCO_OU_MAIOR
+    GOTO    SAIDA0100
+    
+CINCO_OU_MAIOR:
+    MOVFW   ADRESH
+    SUBLW   D'200'
+    BTFSS   STATUS, C
+    GOTO    SEIS_OU_MAIOR
+    GOTO    SAIDA0101
+    
+SEIS_OU_MAIOR:
+    MOVFW   ADRESH
+    SUBLW   D'250'
+    BTFSS   STATUS, C
+    GOTO    SETE_OU_MAIOR
+    GOTO    SAIDA0110
+
+SETE_OU_MAIOR:
+    RETURN
 SAIDA0000:
+    BCF B0
+    BCF B1
+    BCF B2
+    BCF B3
     GOTO SAI_INT
-SAIDA0001:    
-    BSF     B0
+
+SAIDA0001:
+    
+    BSF B0
+    BCF B1
+    BCF B2
+    BCF B3
     GOTO    SAI_INT
+    
+SAIDA0010:
+    
+    BCF B0
+    BSF B1
+    BCF B2
+    BCF B3
+    GOTO    SAI_INT
+
+SAIDA0011:
+    BSF	    B0
+    BSF	    B1
+    BCF	    B2
+    BCF	    B3
+    GOTO    SAI_INT
+
+SAIDA0100:
+    BCF	    B0
+    BCF	    B1
+    BSF	    B2
+    BCF	    B3
+    GOTO    SAI_INT
+
+SAIDA0101:
+    BSF	    B0
+    BCF	    B1
+    BSF	    B2
+    BCF	    B3
+    GOTO    SAI_INT
+    
+SAIDA0110:
+    BCF	    B0
+    BSF	    B1
+    BSF	    B2
+    BCF	    B3
+    GOTO    SAI_INT
+    
 SAI_INT
 	SWAPF	STATUS_TEMP,W
 	MOVWF	STATUS		;MOVE STATUS_TEMP PARA STATUS
@@ -111,6 +203,16 @@ SAI_INT
 	RETFIE
 
 ;*	            	 ROTINAS E SUBROTINAS                      *
+
+DELAY:
+    MOVLW   D'250'      ; Carrega W com 250 (valor para o contador externo)
+    MOVWF   CONT1       ; Armazena em CONT1 (contador externo)
+
+DELAY_LOOP:
+    NOP                 ; No Operation - cada instrução leva 1 ciclo
+    DECFSZ  CONT1,F     ; Decrementa CONT1 e verifica se chegou a 0
+    GOTO    DELAY_LOOP  ; Se CONT1 não for zero, repete o loop
+    RETURN              ; Re
 
 SUBROTINA1
 
@@ -125,7 +227,7 @@ SUBROTINA1
 	
 INICIO
 	BANK1				;ALTERA PARA O BANCO 1
-	MOVLW	B'00001000' ;CONFIGURA TODAS AS PORTAS DO GPIO (PINOS)
+	MOVLW	B'00000100' ;CONFIGURA TODAS AS PORTAS DO GPIO (PINOS)
 	MOVWF	TRISIO		;COMO SAÍDAS
 	MOVLW	B'00000100'
 	MOVWF	ANSEL 		;DEFINE PORTAS COMO Digital I/O
